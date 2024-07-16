@@ -58,7 +58,7 @@ MIDDLEWARE = [
     
 ]
 
-CORS_ALLOW_ALL_ORIGINS = Truegit 
+CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'listingsapi.urls'
 
 TEMPLATES = [
