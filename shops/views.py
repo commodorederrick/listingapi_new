@@ -1,66 +1,53 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework import generics, filters
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Shop, Listing
 from .serializers import ShopSerializer, ListingSerializer
-#Create your views here
 
-class ShopViewSet(viewsets.ModelViewSet):
+class ShopListCreateAPIView(generics.ListCreateAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
 
-    @action(detail=True, methods=['get'])
-    def listings(self, request, pk=None):
-        shop = self.get_object()
-        listings = shop.listings.all()
-        serializer = ListingSerializer(listings, many=True)
-        return Response(serializer.data)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ListingViewSet(viewsets.ModelViewSet):
-    queryset = Listing.objects.all()
-    serializer_class = ListingSerializer
-
-    @action(detail=False, methods=['get'])
-    def search(self, request):
-        queryset = self.get_queryset()
-        title = request.query_params.get('title', None)
-        if title is not None:
-            queryset = queryset.filter(title__icontains=title)
-        serializer = ListingSerializer(queryset, many=True)
-        return Response(serializer.data)
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import Shop, Listing
-from .serializers import ShopSerializer, ListingSerializer
-import logging
-
-logger = logging.getLogger(__name__)
-
-class ShopViewSet(viewsets.ModelViewSet):
+class ShopDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
 
-    @action(detail=True, methods=['get'])
-    def listings(self, request, pk=None):
-        logger.info("GET /shops/%s/listings", pk)
-        shop = self.get_object()
-        listings = shop.listings.all()
-        serializer = ListingSerializer(listings, many=True)
-        return Response(serializer.data)
+class ShopDashboardAPIView(APIView):
+    def get(self, request, pk, *args, **kwargs):
+        try:
+            shop = Shop.objects.get(pk=pk)
+            serializer = ShopSerializer(shop)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Shop.DoesNotExist:
+            return Response({"error": "Shop not found"}, status=status.HTTP_404_NOT_FOUND)
 
-class ListingViewSet(viewsets.ModelViewSet):
+class ListingListCreateAPIView(generics.ListCreateAPIView):
     queryset = Listing.objects.all()
     serializer_class = ListingSerializer
 
-    @action(detail=False, methods=['get'])
-    def search(self, request):
-        logger.info("GET /listings/search")
-        queryset = self.get_queryset()
-        title = request.query_params.get('title', None)
-        if title is not None:
-            queryset = queryset.filter(title__icontains=title)
-        serializer = ListingSerializer(queryset, many=True)
-        return Response(serializer.data)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ListingDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Listing.objects.all()
+    serializer_class = ListingSerializer
+
+class ListingSearchAPIView(generics.ListAPIView):
+    queryset = Listing.objects.all()
+    serializer_class = ListingSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['price']
+    search_fields = ['title', 'description']
